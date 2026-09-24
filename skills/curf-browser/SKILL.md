@@ -38,9 +38,10 @@ Types: `navigation_started`, `navigation_finished`, `navigation_failed`, `dom`, 
 
 ## Annotations
 
-- The user picks elements with the cursor-arrow toolbar icon (⌘/Ctrl+E) and types a note; notes are appended to `~/.curf/annotations.jsonl`.
+- `pick` turns on curf's element picker for the user; they click an element and type a note, and notes are appended to `~/.curf/annotations.jsonl`.
 - `annotations` lists them (with `selector`, `url`, `text`, `html`, `note`, `time`). Use the saved `selector` with `extract`/`click` to act on what the user pointed at.
 - `annotate "<css>" "note"` saves one programmatically; `pick` / `pick 0` toggles the picker for the user.
+- The cursor-arrow toolbar icon (⌘/Ctrl+E) shows/hides the embedded [Cluso Inspector](https://github.com/jasonkneen/cluso-inspector) bar instead (`cluso-show on|off` from a script). `cluso` returns its comments on the current page as JSON (`cluso --markdown` for agent-ready Markdown), and they also flow to the Cluso relay on `localhost:4747` when one is running.
 
 ## Gotchas
 

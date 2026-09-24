@@ -13,6 +13,8 @@
   ./curfctl.py changes --since 0 --type dom
   ./curfctl.py annotations
   ./curfctl.py screenshot /tmp/page.png
+  ./curfctl.py cluso [--markdown]            # Cluso Inspector comments on the current page
+  ./curfctl.py cluso-show [on|off]           # show / hide the Cluso Inspector bar
 
 Or import it:  from curfctl import Curf; c = Curf(); c.navigate("example.com")
 """
@@ -119,6 +121,8 @@ class Curf:
     def annotations(self): return self.call("/annotations").get("annotations", [])
     def changes(self, since=0, type=None): return self.call("/changes", since=since, type=type)
     def screenshot(self, path=None): return self.call("/screenshot", path=path)
+    def cluso(self, markdown=False): return self.call("/cluso", format="markdown" if markdown else "json").get("value")
+    def cluso_show(self, on=True): return self.call("/cluso/show", on=int(on))
 
 
 def main(argv):
@@ -134,6 +138,11 @@ def main(argv):
 
     if cmd == "changes":
         out = c.changes(since=opt("--since", 0), type=opt("--type"))
+    elif cmd == "cluso":
+        out = c.cluso(markdown="--markdown" in flags)
+        if "--markdown" in flags: print(out or ""); return 0
+    elif cmd == "cluso-show":
+        out = c.cluso_show(on=(pos[0] if pos else "on") not in ("off", "0", "false"))
     elif cmd == "type":
         out = c.type(pos[0], pos[1], submit="--submit" in flags)
     elif hasattr(c, cmd):

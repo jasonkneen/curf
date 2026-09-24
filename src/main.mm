@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include "cluso.hpp"
 #include "control_server.hpp"
 #include "inject.js.hpp"
 #include "url_util.hpp"
@@ -55,6 +56,7 @@ static void onMain(dispatch_block_t block) {
 @property(strong) NSProgressIndicator* progress;
 @property(strong) NSMutableArray<NSDictionary*>* changes;
 @property(assign) long long seq;
+@property(assign) BOOL apiPicking, clusoOn;
 @property(copy) NSString* initialURL;
 @end
 
@@ -98,7 +100,7 @@ static void onMain(dispatch_block_t block) {
     [nav addItemWithTitle:@"Reload" action:@selector(reload:) keyEquivalent:@"r"].target = self;
     [nav addItemWithTitle:@"Back" action:@selector(goBack:) keyEquivalent:@"["].target = self;
     [nav addItemWithTitle:@"Forward" action:@selector(goForward:) keyEquivalent:@"]"].target = self;
-    [nav addItemWithTitle:@"Select Element" action:@selector(togglePick:) keyEquivalent:@"e"].target = self;
+    [nav addItemWithTitle:@"Cluso Inspector" action:@selector(toggleCluso:) keyEquivalent:@"e"].target = self;
     [nav addItemWithTitle:@"Site Information" action:@selector(showSiteInfo:) keyEquivalent:@"i"].target = self;
     navItem.submenu = nav;
     [bar addItem:navItem];
@@ -131,8 +133,8 @@ static void onMain(dispatch_block_t block) {
     self.secureBtn = [self button:@"info.circle" tip:@"Site information" action:@selector(showSiteInfo:) x:104];
     for (NSButton* b in @[ self.backBtn, self.fwdBtn, self.reloadBtn, self.secureBtn ]) [bar addSubview:b];
 
-    self.pickBtn = [self button:@"cursorarrow.rays" tip:@"Select an element to annotate (⌘E)"
-                         action:@selector(togglePick:) x:W - 40];
+    self.pickBtn = [self button:@"cursorarrow.rays" tip:@"Show / hide Cluso Inspector (⌘E)"
+                         action:@selector(toggleCluso:) x:W - 40];
     [self.pickBtn setButtonType:NSButtonTypePushOnPushOff];
     self.pickBtn.autoresizingMask = NSViewMinXMargin;
     [bar addSubview:self.pickBtn];
@@ -162,6 +164,9 @@ static void onMain(dispatch_block_t block) {
                                                   injectionTime:WKUserScriptInjectionTimeAtDocumentEnd
                                                forMainFrameOnly:YES];
     [cfg.userContentController addUserScript:script];
+    [cfg.userContentController addUserScript:[[WKUserScript alloc] initWithSource:S(curf::clusoUserScript(U(NSHomeDirectory())))
+                                                                     injectionTime:WKUserScriptInjectionTimeAtDocumentEnd
+                                                                  forMainFrameOnly:YES]];
     [cfg.userContentController addScriptMessageHandler:self name:@"curf"];
     cfg.preferences.javaScriptCanOpenWindowsAutomatically = YES;
     cfg.preferences.elementFullscreenEnabled = YES;
@@ -244,18 +249,25 @@ static void onMain(dispatch_block_t block) {
     else [self.web reload];
 }
 
+// The scripting API's element picker (__curf); the toolbar button drives Cluso instead.
 - (void)setPicking:(BOOL)on {
-    self.pickBtn.state = on ? NSControlStateValueOn : NSControlStateValueOff;
-    self.pickBtn.contentTintColor = on ? NSColor.controlAccentColor : nil;
+    self.apiPicking = on;
     [self.web evaluateJavaScript:[NSString stringWithFormat:@"window.__curf && __curf.setActive(%@)", on ? @"true" : @"false"]
                completionHandler:nil];
     if (on) [self.window makeFirstResponder:self.web];
 }
 
-- (void)togglePick:(id)sender {
-    BOOL on = sender == self.pickBtn ? self.pickBtn.state == NSControlStateValueOn
-                                     : self.pickBtn.state != NSControlStateValueOn;
-    [self setPicking:on];
+- (void)setCluso:(BOOL)on {
+    self.clusoOn = on;
+    self.pickBtn.state = on ? NSControlStateValueOn : NSControlStateValueOff;
+    self.pickBtn.contentTintColor = on ? NSColor.controlAccentColor : nil;
+    [self.web evaluateJavaScript:[NSString stringWithFormat:@"window.ClusoInspector && ClusoInspector.instance && "
+                                                            @"(ClusoInspector.instance.%@(), true)", on ? @"enable" : @"disable"]
+               completionHandler:nil];
+}
+
+- (void)toggleCluso:(id)sender {
+    [self setCluso:!self.clusoOn];
 }
 
 - (NSString*)certificateSummary {
@@ -354,6 +366,8 @@ static void onMain(dispatch_block_t block) {
         [self promptForElement:body];
     } else if ([type isEqualToString:@"selectCancelled"]) {
         [self setPicking:NO];
+    } else if ([type isEqualToString:@"cluso"]) {
+        if (![body[@"on"] boolValue] && self.clusoOn) [self setCluso:NO];
     } else if ([type isEqualToString:@"mutations"]) {
         [self record:@"dom" data:@{@"url" : body[@"url"] ?: @"", @"items" : body[@"items"] ?: @[],
                                    @"dropped" : body[@"dropped"] ?: @0}];
@@ -369,7 +383,8 @@ static void onMain(dispatch_block_t block) {
 - (void)webView:(WKWebView*)w didFinishNavigation:(WKNavigation*)nav {
     [self record:@"navigation_finished"
             data:@{@"url" : w.URL.absoluteString ?: @"", @"title" : w.title ?: @"", @"secure" : @(w.hasOnlySecureContent)}];
-    if (self.pickBtn.state == NSControlStateValueOn) [self setPicking:YES];
+    if (self.apiPicking) [self setPicking:YES];
+    if (self.clusoOn) [self setCluso:YES];
 }
 
 - (void)showError:(NSError*)error inWebView:(WKWebView*)w {
@@ -465,7 +480,7 @@ static void onMain(dispatch_block_t block) {
               @"loading" : @(self.web.loading), @"progress" : @(self.web.estimatedProgress),
               @"secure" : @(self.web.hasOnlySecureContent && [self.web.URL.scheme isEqualToString:@"https"]),
               @"canGoBack" : @(self.web.canGoBack), @"canGoForward" : @(self.web.canGoForward),
-              @"picking" : @(self.pickBtn.state == NSControlStateValueOn)};
+              @"picking" : @(self.apiPicking), @"cluso" : @(self.clusoOn)};
     });
     return s;
 }
@@ -510,7 +525,8 @@ static void onMain(dispatch_block_t block) {
             @"GET  /click?selector=<css>", @"POST /type?selector=<css>&submit=0  (body: text)",
             @"GET  /wait?selector=<css>&timeout=30", @"GET  /pick?on=1",
             @"POST /annotate?selector=<css>  (body: note)", @"GET  /annotations",
-            @"GET  /changes?since=<seq>&type=<type>", @"GET  /screenshot?path=<file.png>"
+            @"GET  /changes?since=<seq>&type=<type>", @"GET  /screenshot?path=<file.png>",
+            @"GET  /cluso?format=json|markdown  (Cluso Inspector comments on this page)", @"GET  /cluso/show?on=1"
         ]});
     }
     if (p == "/state") return ok([self state]);
@@ -569,6 +585,16 @@ static void onMain(dispatch_block_t block) {
         BOOL on = q("on", "1") != "0";
         onMain(^{ [self setPicking:on]; });
         return ok(@{@"ok" : @YES, @"picking" : @(on)});
+    }
+    if (p == "/cluso") {
+        return js(q("format", "json") == "markdown"
+                      ? @"window.ClusoInspector && ClusoInspector.instance ? ClusoInspector.instance.toMarkdown() : null"
+                      : @"window.ClusoInspector && ClusoInspector.instance ? ClusoInspector.instance.toJSON() : null");
+    }
+    if (p == "/cluso/show") {
+        BOOL on = q("on", "1") != "0";
+        onMain(^{ [self setCluso:on]; });
+        return ok(@{@"ok" : @YES, @"cluso" : @(on)});
     }
     if (p == "/annotate") {
         NSDictionary* r = [self runJS:[NSString stringWithFormat:@"__curf.describe(document.querySelector(%@))", selector]

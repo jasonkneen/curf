@@ -38,7 +38,8 @@ make                                   # builds curf.app
 - Toolbar with icon buttons: back, forward, reload/stop, security/site-info, element picker.
 - Address bar: full domains (`example.com`, `localhost:3000`, IPs) open directly; anything else is searched on Google.
 - Security icon: green lock (HTTPS), orange warning lock (HTTPS with mixed content), red open lock (HTTP). Click it for site info and the certificate chain.
-- Element picker (⌘E or the cursor icon): hover to highlight, click to select, type a note, and it is saved to `~/.curf/annotations.jsonl`.
+- Cluso Inspector (⌘E or the cursor icon): shows / hides the [Cluso Inspector](https://github.com/jasonkneen/cluso-inspector) bar on every page, to select elements, annotate and comment, and hand the comments to a coding agent through its relay. See [Cluso Inspector](#cluso-inspector) below.
+- Element picker (scripting API, `/pick` and `/annotate`): hover to highlight, click to select, type a note, and it is saved to `~/.curf/annotations.jsonl`.
 - Change log: navigations, DOM mutations, annotations, and scripted actions, kept in memory and written to `~/.curf/changes.jsonl`.
 - Shortcuts: ⌘L address bar, ⌘R reload, ⌘[ / ⌘] back/forward, ⌘I site info.
 
@@ -66,6 +67,21 @@ print(c.changes(since=0)["changes"])
 ```
 
 When a script uses `await` together with multiple statements, end it with `return`.
+
+## Cluso Inspector
+
+curf embeds [Cluso Inspector](https://github.com/jasonkneen/cluso-inspector), injected hidden into every page. The cursor button (⌘E) shows and hides its bar; the state carries across navigations.
+
+- Comments go to the Cluso relay on `localhost:4747` (`CLUSO_INSPECTOR_PORT` to change it). Start it from the cluso-inspector checkout: `node relay.mjs --cwd <your project>`. Without a relay the bar still works locally; sending fails until one is running.
+- The relay token is read at launch from `~/.cluso-inspector/config.json`, so pages on any site can reach it.
+- `GET /cluso` (or `?format=markdown`) returns the comments on the current page; `GET /cluso/show?on=1|0` shows or hides the bar. `/state` reports `cluso`.
+
+The source lives in the cluso-inspector repo, not here. `src/cluso.js.hpp` is a minified copy generated from it:
+
+```sh
+make cluso && make                     # re-embed from ../cluso-inspector/cluso-inspector.js (esbuild via npx), rebuild
+make cluso CLUSO_SRC=/path/to/cluso-inspector.js
+```
 
 ## Agent skill / plugin
 

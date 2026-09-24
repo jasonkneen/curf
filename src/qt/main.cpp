@@ -34,6 +34,7 @@
 #include <memory>
 #include <mutex>
 
+#include "../cluso.hpp"
 #include "../control_server.hpp"
 #include "../inject.js.hpp"
 #include "../url_util.hpp"
@@ -194,6 +195,14 @@ public:
         script.setRunsOnSubFrames(false);
         page_->scripts().insert(script);
 
+        QWebEngineScript cluso;
+        cluso.setName("cluso");
+        cluso.setSourceCode(QString::fromStdString(curf::clusoUserScript(QDir::homePath().toStdString())));
+        cluso.setInjectionPoint(QWebEngineScript::DocumentReady);
+        cluso.setWorldId(QWebEngineScript::MainWorld);
+        cluso.setRunsOnSubFrames(false);
+        page_->scripts().insert(cluso);
+
         buildToolbar();
 
         progress_ = new QProgressBar(this);
@@ -232,7 +241,8 @@ public:
             if (ok) {
                 record("navigation_finished",
                        {{"url", page_->url().toString()}, {"title", page_->title()}, {"secure", isSecure()}});
-                if (pickAct_->isChecked()) setPicking(true);
+                if (apiPicking_) setPicking(true);
+                if (clusoOn_) setCluso(true);
             } else {
                 record("navigation_failed", {{"url", page_->requestedUrl().toString()}});
             }
@@ -298,8 +308,8 @@ private:
         connect(address_, &QLineEdit::returnPressed, this, [this] { navigate(address_->text()); });
         bar->addWidget(address_);
 
-        pickAct_ = addButton(bar, Glyph::Picker, "Select an element to annotate", QKeySequence("Ctrl+E"),
-                             [this] { setPicking(pickAct_->isChecked()); });
+        pickAct_ = addButton(bar, Glyph::Picker, "Show / hide Cluso Inspector", QKeySequence("Ctrl+E"),
+                             [this] { setCluso(pickAct_->isChecked()); });
         pickAct_->setCheckable(true);
 
         auto* focusUrl = new QAction(this);
@@ -370,10 +380,18 @@ private:
         box.exec();
     }
 
+    // The scripting API's element picker (__curf); the toolbar button drives Cluso instead.
     void setPicking(bool on) {
-        pickAct_->setChecked(on);
+        apiPicking_ = on;
         page_->runJavaScript(QString("window.__curf && __curf.setActive(%1)").arg(on ? "true" : "false"));
         if (on) view_->setFocus();
+    }
+
+    void setCluso(bool on) {
+        clusoOn_ = on;
+        pickAct_->setChecked(on);
+        page_->runJavaScript(QString("window.ClusoInspector && ClusoInspector.instance && (ClusoInspector.instance.%1(), true)")
+                                 .arg(on ? "enable" : "disable"));
     }
 
     // ---- Changes & annotations ----
@@ -434,6 +452,8 @@ private:
             QMetaObject::invokeMethod(this, [this, m] { promptForElement(m); }, Qt::QueuedConnection);
         } else if (type == "selectCancelled") {
             setPicking(false);
+        } else if (type == "cluso") {
+            if (!m["on"].toBool() && clusoOn_) QMetaObject::invokeMethod(this, [this] { setCluso(false); }, Qt::QueuedConnection);
         } else if (type == "mutations") {
             record("dom", {{"url", m["url"]}, {"items", m["items"]}, {"dropped", m["dropped"]}});
         }
@@ -487,7 +507,7 @@ private:
             s = {{"url", page_->url().toString()}, {"title", page_->title()}, {"loading", loading_.load()},
                  {"progress", progress_->value() / 100.0}, {"secure", isSecure()},
                  {"canGoBack", page_->history()->canGoBack()}, {"canGoForward", page_->history()->canGoForward()},
-                 {"picking", pickAct_->isChecked()}};
+                 {"picking", apiPicking_.load()}, {"cluso", clusoOn_.load()}};
         });
         return s;
     }
@@ -530,7 +550,8 @@ private:
                 "GET  /click?selector=<css>", "POST /type?selector=<css>&submit=0  (body: text)",
                 "GET  /wait?selector=<css>&timeout=30", "GET  /pick?on=1",
                 "POST /annotate?selector=<css>  (body: note)", "GET  /annotations",
-                "GET  /changes?since=<seq>&type=<type>", "GET  /screenshot?path=<file.png>"}}});
+                "GET  /changes?since=<seq>&type=<type>", "GET  /screenshot?path=<file.png>",
+                "GET  /cluso?format=json|markdown  (Cluso Inspector comments on this page)", "GET  /cluso/show?on=1"}}});
         }
         if (p == "/state") return ok(state());
         if (p == "/navigate") {
@@ -587,6 +608,16 @@ private:
             onMain([&] { setPicking(on); });
             return ok({{"ok", true}, {"picking", on}});
         }
+        if (p == "/cluso") {
+            return js(q("format", "json") == "markdown"
+                          ? "window.ClusoInspector && ClusoInspector.instance ? ClusoInspector.instance.toMarkdown() : null"
+                          : "window.ClusoInspector && ClusoInspector.instance ? ClusoInspector.instance.toJSON() : null");
+        }
+        if (p == "/cluso/show") {
+            bool on = q("on", "1") != "0";
+            onMain([&] { setCluso(on); });
+            return ok({{"ok", true}, {"cluso", on}});
+        }
         if (p == "/annotate") {
             QJsonObject r = runJS(QString("__curf.describe(document.querySelector(%1))").arg(selector), timeout);
             if (!r["value"].isObject()) return {404, toJSON({{"ok", false}, {"error", "no element matches selector"}})};
@@ -641,7 +672,7 @@ private:
     QAction *backAct_ = nullptr, *fwdAct_ = nullptr, *reloadAct_ = nullptr, *secureAct_ = nullptr, *pickAct_ = nullptr;
     QString secureTip_, certError_;
     MixedContentInterceptor interceptor_;
-    std::atomic<bool> loading_{false};
+    std::atomic<bool> loading_{false}, apiPicking_{false}, clusoOn_{false};
 
     std::mutex changesMutex_;
     std::vector<QJsonObject> changes_;

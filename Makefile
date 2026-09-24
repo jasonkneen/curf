@@ -30,3 +30,10 @@ skill:
 	for d in ~/.cursor/skills ~/.claude/skills; do mkdir -p $$d && rm -rf $$d/curf-browser && cp -R skills/curf-browser $$d/; done
 
 .PHONY: skill
+
+# Re-embed Cluso Inspector (minified) from its own checkout, then `make` rebuilds.
+CLUSO_SRC ?= ../cluso-inspector/cluso-inspector.js
+cluso:
+	python3 scripts/embed-cluso.py $(CLUSO_SRC)
+
+.PHONY: cluso
