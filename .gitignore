@@ -1,0 +1,5 @@
+build/
+curf
+curf.app/
+dist/
+.DS_Store
