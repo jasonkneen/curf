@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tileFill" x1="168" y1="148" x2="900" y2="912" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#241252"/>
+      <stop offset="0.46" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#0E9AA8"/>
+    </linearGradient>
+    <radialGradient id="tileGloss" cx="360" cy="270" r="460" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.34"/>
+      <stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tileShade" x1="512" y1="520" x2="512" y2="940" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#020617" stop-opacity="0"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0.30"/>
+    </linearGradient>
+    <linearGradient id="ringFill" x1="280" y1="300" x2="700" y2="780" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D5F4F8"/>
+    </linearGradient>
+    <linearGradient id="cursorFill" x1="610" y1="430" x2="560" y2="800" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF6D0"/>
+      <stop offset="0.42" stop-color="#FFC400"/>
+      <stop offset="1" stop-color="#F25C05"/>
+    </linearGradient>
+    <filter id="tileShadow" x="-15%" y="-15%" width="140%" height="145%">
+      <feOffset dx="0" dy="18" in="SourceAlpha" result="off"/>
+      <feGaussianBlur in="off" stdDeviation="16" result="blur"/>
+      <feFlood flood-color="#070B18" flood-opacity="0.42" result="flood"/>
+      <feComposite in="flood" in2="blur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="tileClip">
+      <rect x="100" y="100" width="824" height="824" rx="185" ry="185"/>
+    </clipPath>
+  </defs>
+  <g filter="url(#tileShadow)">
+    <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#tileFill)"/>
+  </g>
+  <g clip-path="url(#tileClip)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#tileGloss)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#tileShade)"/>
+    <path d="M 548.7 358.9 A 190 190 0 1 0 548.7 681.1" fill="none" stroke="url(#ringFill)" stroke-width="118" stroke-linecap="round"/>
+    <path d="M 600 440 L 451.6 692.1 L 537.2 672.6 L 514.8 802.3 L 585.8 811.6 L 607 683.6 L 694.9 742.8 Z" fill="url(#cursorFill)"/>
+  </g>
+</svg>

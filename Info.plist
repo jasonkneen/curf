@@ -5,6 +5,7 @@
     <key>CFBundleIdentifier</key><string>dev.curf.browser</string>
     <key>CFBundleName</key><string>curf</string>
     <key>CFBundleExecutable</key><string>curf</string>
+    <key>CFBundleIconFile</key><string>curf</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
     <key>NSHighResolutionCapable</key><true/>

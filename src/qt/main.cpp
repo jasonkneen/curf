@@ -658,6 +658,8 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     QApplication::setApplicationName("curf");
     QApplication::setOrganizationName("curf");
+    QApplication::setWindowIcon(QIcon(":/assets/icon-256.png"));
+    QApplication::setDesktopFileName("curf");
 
     int port = 9333;
     QString initial;

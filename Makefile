@@ -11,9 +11,10 @@ curf: $(SRC) $(HDR) Info.plist
 	$(CXX) $(CXXFLAGS) $(OBJCFLAGS) $(SRC) $(FRAMEWORKS) \
 		-Wl,-sectcreate,__TEXT,__info_plist,Info.plist -o $@
 
-curf.app: curf
-	mkdir -p curf.app/Contents/MacOS
+curf.app: curf assets/curf.icns
+	mkdir -p curf.app/Contents/MacOS curf.app/Contents/Resources
 	cp Info.plist curf.app/Contents/Info.plist
+	cp assets/curf.icns curf.app/Contents/Resources/curf.icns
 	cp curf curf.app/Contents/MacOS/curf
 
 run: curf.app
