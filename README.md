@@ -66,3 +66,7 @@ print(c.changes(since=0)["changes"])
 ```
 
 When a script uses `await` together with multiple statements, end it with `return`.
+
+## License
+
+MIT, see [LICENSE.md](LICENSE.md).
