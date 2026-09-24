@@ -67,6 +67,14 @@ print(c.changes(since=0)["changes"])
 
 When a script uses `await` together with multiple statements, end it with `return`.
 
+## Agent skill / plugin
+
+`skills/curf-browser/` teaches AI agents to drive curf (launch, navigate, extract, click/type, annotations, change log). The repo is also a Claude Code and Cursor plugin (`.claude-plugin/`, `.cursor-plugin/`).
+
+```sh
+make skill    # installs it into ~/.cursor/skills and ~/.claude/skills
+```
+
 ## License
 
 MIT, see [LICENSE.md](LICENSE.md).
