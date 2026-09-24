@@ -23,3 +23,9 @@ clean:
 	rm -rf curf curf.app
 
 .PHONY: all run clean
+
+skill:
+	cp curfctl.py skills/curf-browser/scripts/curfctl.py
+	for d in ~/.cursor/skills ~/.claude/skills; do mkdir -p $$d && rm -rf $$d/curf-browser && cp -R skills/curf-browser $$d/; done
+
+.PHONY: skill

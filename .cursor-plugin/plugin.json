@@ -1,0 +1,9 @@
+{
+  "name": "curf",
+  "version": "1.0.0",
+  "description": "Drive the curf scriptable browser: navigate, extract, click/type, annotations, and DOM change tracking.",
+  "author": { "name": "Jason Kneen" },
+  "homepage": "https://github.com/jasonkneen/curf",
+  "license": "MIT",
+  "skills": "./skills"
+}
